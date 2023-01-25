@@ -3,11 +3,12 @@
 
 
 import tkinter as tk
+import os
 import json
 
 
 class App(tk.Tk):
-    save_file = '.db.json'
+    save_file = os.path.join(os.path.dirname(__file__), '.db.json')
     entries = []
 
     def __init__(self):
@@ -79,6 +80,8 @@ class App(tk.Tk):
         self.entries_scrollbar.grid(row=0, column=2, sticky='ns')
 
     def load(self):
+        if not os.path.exists(self.save_file):
+            return
         with open(self.save_file, 'r') as save_file:
             self.entries = json.load(save_file)
 
