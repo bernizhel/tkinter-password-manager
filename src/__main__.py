@@ -38,6 +38,7 @@ class App(tk.Tk):
         self.grid_columnconfigure(0, weight=1)
 
         self._load()
+        self._paint_entries()
 
         self._command_frame = tk.Frame(self)
         self._command_frame.grid(row=1, column=0, pady=self.PADDING)
@@ -86,19 +87,21 @@ class App(tk.Tk):
         self._entries_scrollable_frame.grid_columnconfigure(1, weight=1)
         self._entries_scrollable_frame.grid_columnconfigure(2, weight=0)
 
-        for i in range(len(self._entries)):
-            entry_id = tk.Label(self._entries_scrollable_frame, text=i+1)
-            entry_id.grid(row=i, column=0)
+        for index in range(len(self._entries)):
+            shown_index = index + 1
+            entry_id = tk.Label(
+                self._entries_scrollable_frame, text=shown_index)
+            entry_id.grid(row=index, column=0)
             entry_link = tk.Entry(self._entries_scrollable_frame, bd=0)
-            entry_link.insert(0, self._entries[i].get('link') or '')
+            entry_link.insert(0, self._entries[index].get('link') or '')
             entry_link.configure(state='readonly')
-            entry_link.grid(row=i, column=1)
+            entry_link.grid(row=index, column=1)
             entry_password = tk.Button(
-                self._entries_scrollable_frame, text='Copy password', command=self._copy_entry(i))
-            entry_password.grid(row=i, column=2)
+                self._entries_scrollable_frame, text='Copy password', command=self._copy_entry(index))
+            entry_password.grid(row=index, column=2)
             entry_delete = tk.Button(
-                self._entries_scrollable_frame, text='Delete', command=self._delete_entry(i))
-            entry_delete.grid(row=i, column=3)
+                self._entries_scrollable_frame, text='Delete', command=self._ask_delete_entry(shown_index))
+            entry_delete.grid(row=index, column=3)
 
     def _load(self):
         if not os.path.isfile(self.SAVE_FILE_NAME):
@@ -106,17 +109,13 @@ class App(tk.Tk):
             return
         with open(self.SAVE_FILE_NAME, 'r') as save_file:
             self._entries = json.load(save_file)
-        self._paint_entries()
 
     def _save(self):
         with open(self.SAVE_FILE_NAME, 'w') as save_file:
             json.dump(self._entries, save_file)
 
     def _delete_entry(self, entry_index):
-        def _():
-            del self._entries[entry_index]
-            self._paint_entries()
-        return _
+        del self._entries[entry_index]
 
     def _copy_entry(self, entry_index):
         def _():
@@ -128,14 +127,24 @@ class App(tk.Tk):
         if answer == 'yes':
             self._save()
 
+    def _ask_delete_entry(self, shown_id):
+        def _():
+            answer = messagebox.askquestion(
+                'Delete', f'Delete entry #{shown_id}?')
+            if answer == 'no':
+                return
+            self._delete_entry(shown_id - 1)
+            self._paint_entries()
+        return _
+
     def _add_entry(self, link, password):
         self._entries.append({'link': link, 'password': password})
-        self._paint_entries()
 
     def _add_win_command(self):
         link = self._add_win_link_entry.get()
         password = self._add_win_password_entry.get()
         self._add_entry(link, password)
+        self._paint_entries()
         self._add_win.destroy()
 
     def _toggle_password_show(self):
@@ -170,7 +179,7 @@ class App(tk.Tk):
         self._add_win_button = tk.Button(
             self._add_win, text='Add new entry', command=self._add_win_command)
         self._add_win_button.grid(
-            row=2, columnspan=3, pady=self.PADDING, padx=self.PADDING)
+            row=2, columnspan=4, pady=self.PADDING, padx=self.PADDING)
 
 
 if __name__ == '__main__':
