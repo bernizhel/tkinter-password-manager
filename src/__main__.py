@@ -58,6 +58,8 @@ class App(tk.Tk):
 
         self._command_frame.grid_columnconfigure(0, weight=1)
         self._command_frame.grid_columnconfigure(1, weight=1)
+        self._command_frame.grid_columnconfigure(2, weight=1)
+        self._command_frame.grid_columnconfigure(3, weight=1)
 
         self._save_button = tk.Button(
             self._command_frame, text='Save', command=self._ask_save)
@@ -66,6 +68,12 @@ class App(tk.Tk):
         self._add_button = tk.Button(
             self._command_frame, text='Add new', command=self._ask_add_entry)
         self._add_button.grid(row=0, column=1, padx=self.PADDING)
+
+        self._search_entry = tk.Entry(self._command_frame)
+        self._search_entry.bind('<KeyRelease>', self._search_entries)
+        self._search_entry.grid(row=0, column=2, padx=self.PADDING)
+        self._search_label = tk.Label(self._command_frame, text='Search')
+        self._search_label.grid(row=0, column=3, padx=self.PADDING)
 
     def _paint_entries(self):
         if hasattr(self, 'entries_frame'):
@@ -104,7 +112,7 @@ class App(tk.Tk):
         self._entries_scrollable_frame.grid_columnconfigure(2, weight=0)
 
         row_index = 0
-        for entry_id, entry_data in self._entries_storage.get_all().items():
+        for entry_id, entry_data in self._entries_storage.get_filtered().items():
             shown_index = row_index + 1
             entry_id_label = tk.Label(
                 self._entries_scrollable_frame, text=shown_index, width=self.ID_WIDTH, justify='left')
@@ -128,6 +136,10 @@ class App(tk.Tk):
             entry_update_button.grid(row=row_index, column=5)
             row_index += 1
 
+    def _search_entries(self, _):
+        self._entries_storage.query = self._search_entry.get()
+        self._paint_entries()
+
     def _ask_save(self):
         answer = messagebox.askquestion('Save', 'Save the changes?')
         if answer == 'yes':
@@ -146,7 +158,7 @@ class App(tk.Tk):
     def _add_win_command(self):
         link = self._add_win_link_entry.get()
         password = self._add_win_password_entry.get()
-        self._entries_storage.add_entry(link, password)
+        self._entries_storage.add_entry(link=link, password=password)
         self._paint_entries()
         self._add_win.destroy()
 
@@ -246,6 +258,15 @@ class App(tk.Tk):
 class EntriesStorage:
     SAVE_FILE_NAME = os.path.join(os.path.dirname(__file__), '.db.json')
     _entries = {}
+    _query = ''
+
+    @property
+    def query(self):
+        return self._query
+    
+    @query.setter
+    def query(self, value):
+        self._query = value
 
     def __init__(self):
         self._load()
@@ -260,18 +281,22 @@ class EntriesStorage:
         with open(self.SAVE_FILE_NAME, 'w') as save_file:
             json.dump(self._entries, save_file)
 
-    def add_entry(self, link, password):
-        self._entries[str(uuid.uuid4())] = {'link': link, 'password': password}
+    def add_entry(self, **kwargs):
+        self._entries[str(uuid.uuid4())] = {key: value for key, value in kwargs.items()}
 
     def delete_entry(self, entry_id):
         self._entries.pop(entry_id)
 
-    def update_entry(self, entry_id, **kwrags):
-        for key, value in kwrags.items():
+    def update_entry(self, entry_id, **kwargs):
+        for key, value in kwargs.items():
             self._entries[entry_id][key] = value
-
+    
     def get_all(self):
         return self._entries
+    
+    def get_filtered(self):
+        filtered_items = filter(lambda item: self._query in item[1].get('link'), self._entries.items())
+        return {key: value for key, value in filtered_items}
 
     def get_by_id(self, entry_id):
         return self._entries.get(entry_id)
