@@ -10,6 +10,7 @@ import pyperclip
 
 
 class App(tk.Tk):
+    PADDING = 10
     WINDOW_WIDTH = 600
     WINDOW_HEIGHT = 400
     SAVE_FILE_NAME = os.path.join(os.path.dirname(__file__), '.db.json')
@@ -39,7 +40,7 @@ class App(tk.Tk):
         self._load()
 
         self._command_frame = tk.Frame(self)
-        self._command_frame.grid(row=1, column=0, pady=10)
+        self._command_frame.grid(row=1, column=0, pady=self.PADDING)
 
         self._save_button = tk.Button(
             self._command_frame, text='Save', command=self._ask_save)
@@ -56,11 +57,11 @@ class App(tk.Tk):
         self._entries_frame = tk.Frame(
             self, width=self.WINDOW_WIDTH, height=self.WINDOW_HEIGHT)
         self._entries_frame.grid(
-            row=0, column=0, padx=10, pady=10)
+            row=0, column=0, padx=self.PADDING, pady=self.PADDING)
         self._entries_canvas = tk.Canvas(
             self._entries_frame, width=self.WINDOW_WIDTH, height=self.WINDOW_HEIGHT)
         self._entries_canvas.grid(
-            row=0, column=0, padx=10, pady=10)
+            row=0, column=0, padx=self.PADDING, pady=self.PADDING)
 
         self._entries_scrollbar = tk.Scrollbar(
             self._entries_frame, orient='vertical', command=self._entries_canvas.yview)
@@ -68,7 +69,7 @@ class App(tk.Tk):
 
         self._entries_scrollable_frame = tk.Frame(self._entries_canvas)
         self._entries_scrollable_frame.grid(
-            row=0, column=0, padx=10, pady=10)
+            row=0, column=0, padx=self.PADDING, pady=self.PADDING)
         self._entries_scrollable_frame.bind(
             '<Configure>',
             lambda _: self._entries_canvas.configure(
@@ -137,20 +138,39 @@ class App(tk.Tk):
         self._add_entry(link, password)
         self._add_win.destroy()
 
+    def _toggle_password_show(self):
+        self._add_win_password_is_shown = not self._add_win_password_is_shown
+        password_mode = '' if self._add_win_password_is_shown else '*'
+        password_button_text = 'Hide' if self._add_win_password_is_shown else 'Show'
+        self._add_win_password_show_button.configure(text=password_button_text)
+        self._add_win_password_entry.configure(show=password_mode)
+
     def _ask_add_entry(self):
         self._add_win = tk.Toplevel(self)
         self._add_win.wm_resizable(width=False, height=False)
+        self._add_win_link_label = tk.Label(self._add_win, text='Link')
+        self._add_win_link_label.grid(
+            row=0, column=0, pady=self.PADDING, padx=self.PADDING)
+        self._add_win_link_entry = tk.Entry(self._add_win)
+        self._add_win_link_entry.grid(
+            row=0, column=1, pady=self.PADDING, padx=self.PADDING)
+        self._add_win_password_label = tk.Label(self._add_win, text='Password')
+        self._add_win_password_label.grid(
+            row=1, column=0, pady=self.PADDING, padx=self.PADDING)
+        self._add_win_password_entry = tk.Entry(self._add_win, show='*')
+        self._add_win_password_entry.grid(
+            row=1, column=1, pady=self.PADDING, padx=self.PADDING)
+        self._add_win_password_is_shown = False
+        self._add_win_password_show_button = tk.Button(
+            self._add_win, text='Show')
+        self._add_win_password_show_button.configure(
+            command=self._toggle_password_show)
+        self._add_win_password_show_button.grid(
+            row=1, column=3, pady=self.PADDING, padx=self.PADDING)
         self._add_win_button = tk.Button(
             self._add_win, text='Add new entry', command=self._add_win_command)
-        self._add_win_button.grid(row=3, columnspan=2)
-        self._add_win_link_label = tk.Label(self._add_win, text='Link')
-        self._add_win_link_label.grid(row=0, column=0)
-        self._add_win_link_entry = tk.Entry(self._add_win, bd=5)
-        self._add_win_link_entry.grid(row=0, column=1)
-        self._add_win_password_label = tk.Label(self._add_win, text='Password')
-        self._add_win_password_label.grid(row=1, column=0)
-        self._add_win_password_entry = tk.Entry(self._add_win, bd=5)
-        self._add_win_password_entry.grid(row=1, column=1)
+        self._add_win_button.grid(
+            row=2, columnspan=3, pady=self.PADDING, padx=self.PADDING)
 
 
 if __name__ == '__main__':
