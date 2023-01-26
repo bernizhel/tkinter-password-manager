@@ -88,19 +88,23 @@ class App(tk.Tk):
 
         row_index = 0
         for entry_id, entry_data in self._entries_storage.get_all().items():
-            entry_id = tk.Label(
+            entry_id_label = tk.Label(
                 self._entries_scrollable_frame, text=row_index + 1)
-            entry_id.grid(row=row_index, column=0)
-            entry_link = tk.Entry(self._entries_scrollable_frame, bd=0)
-            entry_link.insert(0, entry_data.get('link'))
-            entry_link.configure(state='readonly')
-            entry_link.grid(row=row_index, column=1)
-            entry_password = tk.Button(
+            entry_id_label.grid(row=row_index, column=0)
+            entry_link_readonly_entry = tk.Entry(
+                self._entries_scrollable_frame, bd=0)
+            entry_link_readonly_entry.insert(0, entry_data.get('link'))
+            entry_link_readonly_entry.configure(state='readonly')
+            entry_link_readonly_entry.grid(row=row_index, column=1)
+            entry_copy_password_button = tk.Button(
                 self._entries_scrollable_frame, text='Copy password', command=lambda: pyperclip.copy(entry_data.get('password')))
-            entry_password.grid(row=row_index, column=2)
-            entry_delete = tk.Button(
+            entry_copy_password_button.grid(row=row_index, column=2)
+            entry_delete_button = tk.Button(
                 self._entries_scrollable_frame, text='Delete', command=self._ask_delete_entry(row_index + 1, entry_id))
-            entry_delete.grid(row=row_index, column=3)
+            entry_delete_button.grid(row=row_index, column=3)
+            entry_update_button = tk.Button(
+                self._entries_scrollable_frame, text='Update', command=self._ask_update_entry(row_index + 1, entry_id))
+            entry_update_button.grid(row=row_index, column=4)
             row_index += 1
 
     def _ask_save(self):
@@ -125,7 +129,7 @@ class App(tk.Tk):
         self._paint_entries()
         self._add_win.destroy()
 
-    def _toggle_password_show(self):
+    def _add_win_toggle_password_show(self):
         self._add_win_password_is_shown = not self._add_win_password_is_shown
         password_mode = '' if self._add_win_password_is_shown else '*'
         password_button_text = 'Hide' if self._add_win_password_is_shown else 'Show'
@@ -151,13 +155,71 @@ class App(tk.Tk):
         self._add_win_password_show_button = tk.Button(
             self._add_win, text='Show')
         self._add_win_password_show_button.configure(
-            command=self._toggle_password_show)
+            command=self._add_win_toggle_password_show)
         self._add_win_password_show_button.grid(
             row=1, column=3, pady=self.PADDING, padx=self.PADDING)
         self._add_win_button = tk.Button(
             self._add_win, text='Add new entry', command=self._add_win_command)
         self._add_win_button.grid(
             row=2, columnspan=4, pady=self.PADDING, padx=self.PADDING)
+
+    def _update_win_command(self, entry_id):
+        def _():
+            link = self._update_win_link_entry.get()
+            password = self._update_win_password_entry.get()
+            self._entries_storage.update_entry(
+                entry_id, link=link, password=password)
+            self._paint_entries()
+            self._update_win.destroy()
+        return _
+
+    def _update_win_toggle_password_show(self):
+        self._update_win_password_is_shown = not self._update_win_password_is_shown
+        password_mode = '' if self._update_win_password_is_shown else '*'
+        password_button_text = 'Hide' if self._update_win_password_is_shown else 'Show'
+        self._update_win_password_show_button.configure(
+            text=password_button_text)
+        self._update_win_password_entry.configure(show=password_mode)
+
+    def _ask_update_entry(self, shown_index, entry_id):
+        def _():
+            initial_entry = self._entries_storage.get_by_id(entry_id)
+            self._update_win = tk.Toplevel(self)
+            self._update_win.wm_resizable(width=False, height=False)
+            self._update_win_head_label = tk.Label(
+                self._update_win, text=f'Update entry #{shown_index}')
+            self._update_win_head_label.grid(
+                row=0, columnspan=4, pady=self.PADDING, padx=self.PADDING)
+            self._update_win_link_label = tk.Label(
+                self._update_win, text='Link')
+            self._update_win_link_label.grid(
+                row=1, column=0, pady=self.PADDING, padx=self.PADDING)
+            self._update_win_link_entry = tk.Entry(self._update_win)
+            self._update_win_link_entry.insert(0, initial_entry.get('link'))
+            self._update_win_link_entry.grid(
+                row=1, column=1, pady=self.PADDING, padx=self.PADDING)
+            self._update_win_password_label = tk.Label(
+                self._update_win, text='Password')
+            self._update_win_password_label.grid(
+                row=2, column=0, pady=self.PADDING, padx=self.PADDING)
+            self._update_win_password_entry = tk.Entry(
+                self._update_win, show='*')
+            self._update_win_password_entry.insert(
+                0, initial_entry.get('password'))
+            self._update_win_password_entry.grid(
+                row=2, column=1, pady=self.PADDING, padx=self.PADDING)
+            self._update_win_password_is_shown = False
+            self._update_win_password_show_button = tk.Button(
+                self._update_win, text='Show')
+            self._update_win_password_show_button.configure(
+                command=self._update_win_toggle_password_show)
+            self._update_win_password_show_button.grid(
+                row=2, column=3, pady=self.PADDING, padx=self.PADDING)
+            self._update_win_button = tk.Button(
+                self._update_win, text='Update the entry', command=self._update_win_command(entry_id))
+            self._update_win_button.grid(
+                row=3, columnspan=4, pady=self.PADDING, padx=self.PADDING)
+        return _
 
 
 class EntriesStorage:
@@ -183,11 +245,15 @@ class EntriesStorage:
     def delete_entry(self, entry_id):
         self._entries.pop(entry_id)
 
+    def update_entry(self, entry_id, **kwrags):
+        for key, value in kwrags.items():
+            self._entries[entry_id][key] = value
+
     def get_all(self):
         return self._entries
 
-#     def get_by_id(self, entry_id):
-#         return self._entries.get(entry_id)
+    def get_by_id(self, entry_id):
+        return self._entries.get(entry_id)
 
 
 if __name__ == '__main__':
