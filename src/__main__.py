@@ -7,11 +7,25 @@ from tkinter import messagebox
 import os
 import json
 import uuid
+import webbrowser
 import pyperclip
+
+
+def open_link(link):
+    def _():
+        webbrowser.open_new_tab(link)
+    return _
+
+
+def copy_password(password):
+    def _():
+        pyperclip.copy(password)
+    return _
 
 
 class App(tk.Tk):
     PADDING = 10
+    ID_WIDTH = 10
     WINDOW_WIDTH = 600
     WINDOW_HEIGHT = 400
 
@@ -42,13 +56,16 @@ class App(tk.Tk):
         self._command_frame = tk.Frame(self)
         self._command_frame.grid(row=1, column=0, pady=self.PADDING)
 
+        self._command_frame.grid_columnconfigure(0, weight=1)
+        self._command_frame.grid_columnconfigure(1, weight=1)
+
         self._save_button = tk.Button(
             self._command_frame, text='Save', command=self._ask_save)
-        self._save_button.grid(row=0, column=0)
+        self._save_button.grid(row=0, column=0, padx=self.PADDING)
 
         self._add_button = tk.Button(
-            self._command_frame, text='Add', command=self._ask_add_entry)
-        self._add_button.grid(row=0, column=1)
+            self._command_frame, text='Add new', command=self._ask_add_entry)
+        self._add_button.grid(row=0, column=1, padx=self.PADDING)
 
     def _paint_entries(self):
         if hasattr(self, 'entries_frame'):
@@ -88,23 +105,27 @@ class App(tk.Tk):
 
         row_index = 0
         for entry_id, entry_data in self._entries_storage.get_all().items():
+            shown_index = row_index + 1
             entry_id_label = tk.Label(
-                self._entries_scrollable_frame, text=row_index + 1)
+                self._entries_scrollable_frame, text=shown_index, width=self.ID_WIDTH, justify='left')
             entry_id_label.grid(row=row_index, column=0)
             entry_link_readonly_entry = tk.Entry(
                 self._entries_scrollable_frame, bd=0)
             entry_link_readonly_entry.insert(0, entry_data.get('link'))
             entry_link_readonly_entry.configure(state='readonly')
             entry_link_readonly_entry.grid(row=row_index, column=1)
-            entry_copy_password_button = tk.Button(
-                self._entries_scrollable_frame, text='Copy password', command=lambda: pyperclip.copy(entry_data.get('password')))
-            entry_copy_password_button.grid(row=row_index, column=2)
+            entry_open_link_button = tk.Button(
+                self._entries_scrollable_frame, text='Open', command=open_link(entry_data.get('link')))
+            entry_open_link_button.grid(row=row_index, column=2)
+            entry_copy_password_button = tk.Button(self._entries_scrollable_frame, text='Copy password', command=copy_password(
+                self._entries_storage.get_by_id(entry_id).get('password')))
+            entry_copy_password_button.grid(row=row_index, column=3)
             entry_delete_button = tk.Button(
-                self._entries_scrollable_frame, text='Delete', command=self._ask_delete_entry(row_index + 1, entry_id))
-            entry_delete_button.grid(row=row_index, column=3)
-            entry_update_button = tk.Button(
-                self._entries_scrollable_frame, text='Update', command=self._ask_update_entry(row_index + 1, entry_id))
-            entry_update_button.grid(row=row_index, column=4)
+                self._entries_scrollable_frame, text='Delete', command=self._ask_delete_entry(shown_index, entry_id))
+            entry_delete_button.grid(row=row_index, column=4)
+            entry_update_button = tk.Button(self._entries_scrollable_frame, text='Update', command=self._ask_update_entry(
+                shown_index, entry_id))
+            entry_update_button.grid(row=row_index, column=5)
             row_index += 1
 
     def _ask_save(self):
