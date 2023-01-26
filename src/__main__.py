@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import messagebox
 import os
 import json
+import uuid
 import pyperclip
 
 
@@ -13,8 +14,6 @@ class App(tk.Tk):
     PADDING = 10
     WINDOW_WIDTH = 600
     WINDOW_HEIGHT = 400
-    SAVE_FILE_NAME = os.path.join(os.path.dirname(__file__), '.db.json')
-    _entries = []
 
     def _app_exit(self):
         answer = messagebox.askyesnocancel(
@@ -22,7 +21,7 @@ class App(tk.Tk):
         if answer is None:
             return
         if answer == True:
-            self._save()
+            self._entries_storage.save()
         self.destroy()
 
     def __init__(self):
@@ -37,7 +36,7 @@ class App(tk.Tk):
         self.grid_rowconfigure(1, weight=0)
         self.grid_columnconfigure(0, weight=1)
 
-        self._load()
+        self._entries_storage = EntriesStorage()
         self._paint_entries()
 
         self._command_frame = tk.Frame(self)
@@ -87,63 +86,42 @@ class App(tk.Tk):
         self._entries_scrollable_frame.grid_columnconfigure(1, weight=1)
         self._entries_scrollable_frame.grid_columnconfigure(2, weight=0)
 
-        for index in range(len(self._entries)):
-            shown_index = index + 1
+        row_index = 0
+        for entry_id, entry_data in self._entries_storage.get_all().items():
             entry_id = tk.Label(
-                self._entries_scrollable_frame, text=shown_index)
-            entry_id.grid(row=index, column=0)
+                self._entries_scrollable_frame, text=row_index + 1)
+            entry_id.grid(row=row_index, column=0)
             entry_link = tk.Entry(self._entries_scrollable_frame, bd=0)
-            entry_link.insert(0, self._entries[index].get('link') or '')
+            entry_link.insert(0, entry_data.get('link'))
             entry_link.configure(state='readonly')
-            entry_link.grid(row=index, column=1)
+            entry_link.grid(row=row_index, column=1)
             entry_password = tk.Button(
-                self._entries_scrollable_frame, text='Copy password', command=self._copy_entry(index))
-            entry_password.grid(row=index, column=2)
+                self._entries_scrollable_frame, text='Copy password', command=lambda: pyperclip.copy(entry_data.get('password')))
+            entry_password.grid(row=row_index, column=2)
             entry_delete = tk.Button(
-                self._entries_scrollable_frame, text='Delete', command=self._ask_delete_entry(shown_index))
-            entry_delete.grid(row=index, column=3)
-
-    def _load(self):
-        if not os.path.isfile(self.SAVE_FILE_NAME):
-            self._entries = []
-            return
-        with open(self.SAVE_FILE_NAME, 'r') as save_file:
-            self._entries = json.load(save_file)
-
-    def _save(self):
-        with open(self.SAVE_FILE_NAME, 'w') as save_file:
-            json.dump(self._entries, save_file)
-
-    def _delete_entry(self, entry_index):
-        del self._entries[entry_index]
-
-    def _copy_entry(self, entry_index):
-        def _():
-            pyperclip.copy(self._entries[entry_index].get('password') or '')
-        return _
+                self._entries_scrollable_frame, text='Delete', command=self._ask_delete_entry(row_index + 1, entry_id))
+            entry_delete.grid(row=row_index, column=3)
+            row_index += 1
 
     def _ask_save(self):
         answer = messagebox.askquestion('Save', 'Save the changes?')
         if answer == 'yes':
-            self._save()
+            self._entries_storage.save()
 
-    def _ask_delete_entry(self, shown_id):
+    def _ask_delete_entry(self, shown_index, entry_id):
         def _():
             answer = messagebox.askquestion(
-                'Delete', f'Delete entry #{shown_id}?')
+                'Delete', f'Delete entry #{shown_index}?')
             if answer == 'no':
                 return
-            self._delete_entry(shown_id - 1)
+            self._entries_storage.delete_entry(entry_id)
             self._paint_entries()
         return _
-
-    def _add_entry(self, link, password):
-        self._entries.append({'link': link, 'password': password})
 
     def _add_win_command(self):
         link = self._add_win_link_entry.get()
         password = self._add_win_password_entry.get()
-        self._add_entry(link, password)
+        self._entries_storage.add_entry(link, password)
         self._paint_entries()
         self._add_win.destroy()
 
@@ -180,6 +158,36 @@ class App(tk.Tk):
             self._add_win, text='Add new entry', command=self._add_win_command)
         self._add_win_button.grid(
             row=2, columnspan=4, pady=self.PADDING, padx=self.PADDING)
+
+
+class EntriesStorage:
+    SAVE_FILE_NAME = os.path.join(os.path.dirname(__file__), '.db.json')
+    _entries = {}
+
+    def __init__(self):
+        self._load()
+
+    def _load(self):
+        if not os.path.isfile(self.SAVE_FILE_NAME):
+            return
+        with open(self.SAVE_FILE_NAME, 'r') as save_file:
+            self._entries = json.load(save_file)
+
+    def save(self):
+        with open(self.SAVE_FILE_NAME, 'w') as save_file:
+            json.dump(self._entries, save_file)
+
+    def add_entry(self, link, password):
+        self._entries[str(uuid.uuid4())] = {'link': link, 'password': password}
+
+    def delete_entry(self, entry_id):
+        self._entries.pop(entry_id)
+
+    def get_all(self):
+        return self._entries
+
+#     def get_by_id(self, entry_id):
+#         return self._entries.get(entry_id)
 
 
 if __name__ == '__main__':
