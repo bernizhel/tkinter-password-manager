@@ -66,6 +66,7 @@ class App(tk.Tk):
         if answer == True:
             self._storage.save(password=self._password)
         self.destroy()
+        pyperclip.copy('')
 
     def _paint(self):
         self.grid_rowconfigure(0, weight=1)
