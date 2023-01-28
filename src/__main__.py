@@ -56,7 +56,7 @@ class App(tk.Tk):
         
         try:
             self._storage.connect()
-        except FileNotFoundError:
+        except DatabaseNotFoundError:
             self._is_new = True
 
         self._ask_password()
@@ -401,20 +401,26 @@ class FernetEncryptor:
         return decrypted_data
 
 
+class DatabaseNotFoundError(Exception):
+    def __init__(self, message='The database file is not found.'):
+        super().__init__(message)
+
+
 class PasswordNotCorrectError(Exception):
     def __init__(self, message='The given password is not correct.'):
         super().__init__(message)
 
 
 class EntriesStorage:
-    _database_file_name = '.database'
+    _database_file_name = ''
     _data = bytes()
     _entries = {}
     _query = ''
 
 
-    def __init__(self, encryptor):
+    def __init__(self, encryptor, database_file_name='.database'):
         self._encryptor = encryptor
+        self._database_file_name = database_file_name
 
 
     @property
@@ -424,7 +430,7 @@ class EntriesStorage:
 
     def connect(self):
         if not os.path.exists(self._database_path):
-            raise FileNotFoundError('The database file is not found in the directory with the app running.')
+            raise DatabaseNotFoundError('The database file is not found in the directory with the app running.')
         
         with open(self._database_path, 'rb') as database_file:
             self._data = database_file.read()
