@@ -55,7 +55,6 @@ class App(tk.Tk):
             self._storage.connect()
         except FileNotFoundError:
             self._is_new = True
-            self._storage.create()
 
         self._ask_password()
 
@@ -165,7 +164,7 @@ class App(tk.Tk):
                 self._storage.load(password=password)
             self._password = password
 
-        confirm_button_text = 'Confirm the password' + (' as new' if self._is_new else '')
+        confirm_button_text = 'Create new database' if self._is_new else 'Continue with the existing database'
 
         password_window = ModalWindow(command_on_close=lambda: self.destroy())
         password_window.set_password_entry(can_toggle_show=False)
@@ -337,9 +336,6 @@ class EntriesStorage:
             raise FileNotFoundError('The database is not found in the directory with the app running.')
         with open(self.DATABASE_FILE_NAME, 'rb') as database_file:
             self._data = database_file.read()
-
-    def create(self):
-        open(self.DATABASE_FILE_NAME, 'wb').close()
 
     def load(self, password=''):
         try:
