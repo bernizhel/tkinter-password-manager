@@ -185,12 +185,14 @@ class App(tk.Tk):
             
             self._entries['entries'][row_index]['delete']['button'] = \
                 tk.Button(self._entries['scrollable'], text='Delete',
-                          command=lambda entry_id=entry_id: self._ask_delete_entry(entry_id=entry_id))
+                          command=lambda entry_id=entry_id, number=row_index + 1: \
+                            self._ask_delete_entry(entry_id=entry_id, number=number))
             self._entries['entries'][row_index]['delete']['button'].grid(row=row_index, column=4)
             
             self._entries['entries'][row_index]['update']['button'] = \
                 tk.Button(self._entries['scrollable'], text='Update',
-                          command=lambda entry_id=entry_id: self._ask_update_entry(entry_id=entry_id))
+                          command=lambda entry_id=entry_id, number=row_index + 1: \
+                            self._ask_update_entry(entry_id=entry_id, number=number))
             self._entries['entries'][row_index]['update']['button'].grid(row=row_index, column=5)
             
             row_index += 1
@@ -221,8 +223,8 @@ class App(tk.Tk):
         self._paint_entries()
 
 
-    def _ask_delete_entry(self, entry_id=''):
-        answer = messagebox.askquestion('Delete', 'Delete the selected entry?')
+    def _ask_delete_entry(self, entry_id='', number=''):
+        answer = messagebox.askquestion('Delete', f'Delete the #{number} entry?')
         
         if answer == 'no':
             return
@@ -245,7 +247,7 @@ class App(tk.Tk):
         add_entry_window.paint()
 
 
-    def _ask_update_entry(self, entry_id=''):
+    def _ask_update_entry(self, entry_id='', number=''):
         initial_entry = self._storage.get_by_id(entry_id)
         
         update_entry_window = ModalWindow()
@@ -256,7 +258,7 @@ class App(tk.Tk):
         
         update_entry_window.set_password_entry(placeholder=initial_entry['password'])
         
-        update_entry_window.set_confirm_button(text='Update the entry', command=lambda **kwargs: \
+        update_entry_window.set_confirm_button(text=f'Update the entry #{number}', command=lambda **kwargs: \
                                                self._storage.update_entry(entry_id=entry_id, **kwargs))
         
         update_entry_window.paint()
